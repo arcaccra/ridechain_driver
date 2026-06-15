@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1058290792595",
+    "project_id": "ridechain-c7650",
+    "storage_bucket": "ridechain-c7650.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1058290792595:android:80b441c69138dbdbe27566",
+        "android_client_info": {
+          "package_name": "app.arc.ridechain_driiver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1EKjHP6cejwCbI1rYosU6nQO6KtJGOFg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1058290792595:android:ffb7cdb01607804be27566",
+        "android_client_info": {
+          "package_name": "app.arc.ridex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1EKjHP6cejwCbI1rYosU6nQO6KtJGOFg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
