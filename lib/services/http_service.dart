@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:flutter/foundation.dart';
 import '../app/app_config.dart';
 import '../core/cache_helper.dart';
 import '../data/constants/api_constants.dart';
@@ -59,6 +60,7 @@ class HttpService {
         CancelToken? token,
         bool useCSRFToken = false}) async {
     String uri = "$host$url";
+    debugPrint("GET URL: $uri");
     String? token = await getAuthBearerToken();
     return dio!.get(
       uri,
@@ -81,6 +83,7 @@ class HttpService {
         CancelToken? token,
         bool useCSRFToken = false}) async {
     String uri = url;
+    debugPrint("GET CALLBACK URL: $uri");
     String? token = await getAuthBearerToken();
     return dio!.get(
       uri,
@@ -99,6 +102,7 @@ class HttpService {
   Future<Response> getWithoutHost(String url,
       {Map<String, dynamic>? queryParameters, CancelToken? token}) async {
     String uri = url;
+    debugPrint("GET URL: $uri");
     return dio!.get(
       uri,
       options: Options(
@@ -112,6 +116,7 @@ class HttpService {
   Future<Response> getNoAuth(String url,
       {Map<String, dynamic>? queryParameters, CancelToken? token}) async {
     String uri = "$host$url";
+    debugPrint("GET URL: $uri");
     return dio!.get(
       uri,
       options: Options(headers: {
@@ -124,6 +129,7 @@ class HttpService {
   //post method
   Future<Response> post(String url, {dynamic body, CancelToken? token}) async {
     String uri = "$host$url";
+    debugPrint("POST URL: $uri");
     return dio!.post(
       uri,
       data: body,
@@ -138,6 +144,7 @@ class HttpService {
   Future<Response> loginPost(String url,
       {dynamic body, CancelToken? token}) async {
     String uri = "$host$url";
+    debugPrint("LOGIN POST URL: $uri");
     return dio!.post(
       uri,
       data: body,
@@ -151,6 +158,7 @@ class HttpService {
   //patch from database
   Future<Response> patch(String url, body, {CancelToken? token}) async {
     String uri = "$host$url";
+    debugPrint("PATCH URL: $uri");
     return dio!.patch(
       uri,
       data: body,
@@ -166,6 +174,7 @@ class HttpService {
         dynamic body,
         CancelToken? token}) async {
     String uri = "$host$url";
+    debugPrint("PUT URL: $uri");
     return dio!.put(uri,
         data: body,
         options: Options(

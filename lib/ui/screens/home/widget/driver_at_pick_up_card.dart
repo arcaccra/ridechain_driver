@@ -3,13 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:ridechain_driiver/data/locator.dart';
 import 'package:ridechain_driiver/providers/auth_provider.dart';
 import 'package:ridechain_driiver/services/dialog_service.dart';
 import 'package:ridechain_driiver/services/trip_firebase_service.dart';
-import 'package:ridechain_driiver/ui/screens/scan/scan_screen.dart';
 
 import '../../../../core/core_constants/colors.dart';
 import '../../../../core/core_constants/label.dart';
@@ -249,19 +247,14 @@ class _DriverAtPickUpCardState extends State<DriverAtPickUpCard> {
                         ),
                       ),
                     ),
-                    // Scan / Boarded button
+                    // Check in / Boarded button
                     GestureDetector(
                       onTap: boardedIds.contains(passenger.id)
                           ? null
                           : () {
-                              Get.to(() => ScanScreen(
-                                    passengerName: passenger.fullName,
-                                    onBoardingConfirmed: () {
-                                      if (passenger.id != null) {
-                                        setState(() => boardedIds.add(passenger.id!));
-                                      }
-                                    },
-                                  ));
+                              if (passenger.id != null) {
+                                setState(() => boardedIds.add(passenger.id!));
+                              }
                             },
                       child: Container(
                         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -277,7 +270,7 @@ class _DriverAtPickUpCardState extends State<DriverAtPickUpCard> {
                             Icon(
                               boardedIds.contains(passenger.id)
                                   ? Icons.check_circle_outline
-                                  : Icons.qr_code_scanner,
+                                  : Icons.person_add_outlined,
                               size: 13.w,
                               color: boardedIds.contains(passenger.id)
                                   ? Colors.green
@@ -285,7 +278,7 @@ class _DriverAtPickUpCardState extends State<DriverAtPickUpCard> {
                             ),
                             Gap(4.w),
                             Text(
-                              boardedIds.contains(passenger.id) ? 'Boarded' : 'Scan',
+                              boardedIds.contains(passenger.id) ? 'Boarded' : 'Check in',
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 color: boardedIds.contains(passenger.id)

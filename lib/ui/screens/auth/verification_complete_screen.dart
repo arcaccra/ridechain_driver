@@ -70,7 +70,7 @@ class VerificationCompleteScreen extends StatelessWidget {
                 ),
                 Gap(12.h),
                 Text(
-                  "Your documents are under review. You can start creating rides right away.",
+                  "Welcome to RideChain. Complete any remaining verification or wallet setup from your profile to start creating rides.",
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.white.withValues(alpha: 0.8),

@@ -2,6 +2,8 @@
 
 import 'package:get_it/get_it.dart';
 import 'package:ridechain_driiver/services/trip_firebase_service.dart';
+import '../services/blockfrost_service.dart';
+import '../services/cardano_wallet_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/dialog_service.dart';
 import '../services/image_service.dart';
@@ -21,4 +23,6 @@ void setUpLocator() {
   locator.registerLazySingleton<LocationService>(() => LocationService());
   locator.registerLazySingleton<ConnectionService>(() => ConnectionService());
   locator.registerLazySingleton<TripFirebaseService>(() => TripFirebaseService());
+  locator.registerLazySingleton<CardanoWalletService>(() => CardanoWalletService());
+  locator.registerLazySingleton<BlockfrostService>(() => BlockfrostService());
 }

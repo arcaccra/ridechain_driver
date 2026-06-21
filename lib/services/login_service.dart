@@ -18,16 +18,28 @@ import '../ui/screens/auth/register_screen.dart';
 import 'http_service.dart';
 
 class LoginService extends HttpService {
+  /// Builds a [dio.FormData] from [data], cloning any [dio.MultipartFile] so the
+  /// original instances are never finalized by a request. Without this, a
+  /// retry (or any second submit) reuses an already-finalized MultipartFile and
+  /// throws "The MultipartFile has already been finalized".
+  dio.FormData _formData(Map<String, dynamic> data) {
+    final safe = data.map((key, value) => MapEntry(
+          key,
+          value is dio.MultipartFile ? value.clone() : value,
+        ));
+    return dio.FormData.fromMap(safe);
+  }
+
   //login
   login(Map<String, dynamic> data) async {
-    var body = dio.FormData.fromMap(data);
+    var body = _formData(data);
     var response = await loginPost(Api.login, body: body);
     return response;
   }
 
   //register
   register(Map<String, dynamic> data) async {
-    var body = dio.FormData.fromMap(data);
+    var body = _formData(data);
     var response = await loginPost(Api.register, body: body);
     return response;
   }
@@ -51,21 +63,21 @@ class LoginService extends HttpService {
 
   //update wallet address
   Future updateWalletAddress(Map<String, dynamic> data) async {
-    var body = dio.FormData.fromMap(data);
+    var body = _formData(data);
     var response = await post(Api.wallets, body: body);
     return response;
   }
 
   //upload the form
   Future uploadDriverDocs(Map<String, dynamic> data) async {
-    var body = dio.FormData.fromMap(data);
+    var body = _formData(data);
     var response = await post(Api.drivers, body: body);
     return response;
   }
 
   //upload the form
   updateDriverDocs(Map<String, dynamic> data, int id) async {
-    var body = dio.FormData.fromMap(data);
+    var body = _formData(data);
     var response = await put("${Api.drivers}$id/update", body: body);
     return response;
   }

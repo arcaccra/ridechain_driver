@@ -7,6 +7,7 @@ import 'package:ridechain_driiver/app/theme.dart';
 import '../core/providers.dart';
 import '../data/locator.dart';
 import '../services/connectivity_service.dart';
+import '../services/dialog_service.dart';
 import '../ui/screens/splash/splash_screen.dart';
 
 class MyApp extends StatefulWidget {
@@ -44,6 +45,7 @@ class _MyAppState extends State<MyApp> {
               debugShowCheckedModeBanner: false,
               title: 'Ryde Driver',
               theme: AppThemes.appThemeData[AppTheme.darkTheme],
+              scaffoldMessengerKey: rootScaffoldMessengerKey,
               home: const SplashScreen(),
             ),
           );

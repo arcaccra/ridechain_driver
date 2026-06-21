@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:ridechain_driiver/ui/screens/auth/password_screen.dart';
 import '../../../core/core_constants/colors.dart';
 import '../../../providers/auth_provider.dart';
 import '../../shared_widgets/loader.dart';
@@ -29,7 +30,9 @@ class ImageCaptureScreen extends StatelessWidget {
                   Row(
                     children: [
                       GestureDetector(
-                        onTap: () => Get.back(),
+                        onTap: () {
+                          Get.back();
+                        },
                         child: Container(
                           width: 40.w,
                           height: 40.w,
@@ -42,7 +45,7 @@ class ImageCaptureScreen extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        '2/4',
+                        '2/3',
                         style: TextStyle(
                           fontSize: 13.sp,
                           color: Colors.grey[500],
@@ -56,7 +59,7 @@ class ImageCaptureScreen extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'STEP 2 OF 4',
+                        'STEP 2 OF 3',
                         style: TextStyle(
                           fontSize: 11.sp,
                           color: AppColors.purple,
@@ -75,7 +78,7 @@ class ImageCaptureScreen extends StatelessWidget {
                   // 4-segment progress bar (2 filled)
                   Row(
                     children: List.generate(
-                      4,
+                      3,
                       (i) => Expanded(
                         child: Container(
                           height: 4.h,
@@ -102,7 +105,7 @@ class ImageCaptureScreen extends StatelessWidget {
                   ),
                   Gap(6.h),
                   Text(
-                    'Step 2 of 4 · Passengers will see this before the trip.',
+                    'Step 2 of 3 · Passengers will see this before the trip.',
                     style: TextStyle(fontSize: 13.sp, color: Colors.grey[500]),
                   ),
                   Gap(32.h),
@@ -218,7 +221,7 @@ class ImageCaptureScreen extends StatelessWidget {
                   onPressed: authVm.imageFile != null && !authVm.isLoading
                       ? () async {
                           authVm.addToRegisterMap("avatar", authVm.selectedFile);
-                          await authVm.register();
+                          Get.to(() => PasswordScreen());
                         }
                       : null,
                   icon: authVm.isLoading

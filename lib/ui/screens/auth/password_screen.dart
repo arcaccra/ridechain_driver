@@ -65,14 +65,14 @@ class _PasswordScreenState extends State<PasswordScreen> {
                   ),
                   Gap(8.h),
                   Text(
-                    'Step 4 of 4 · Create a password to finish.',
+                    'Step 3 of 3 · Create a password to finish.',
                     style: TextStyle(fontSize: 13.sp, color: Colors.grey[500]),
                   ),
                   Gap(12.h),
                   // All 4 segments filled
                   Row(
                     children: List.generate(
-                      4,
+                      3,
                       (i) => Expanded(
                         child: Container(
                           height: 4.h,
@@ -209,7 +209,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
                             authVm.addToRegisterMap("password1", password1);
                             var password2 = _confirmPasswordCtrl.text.trim();
                             authVm.addToRegisterMap("password2", password2);
-                            Get.to(() => ImageCaptureScreen());
+                            authVm.addToRegisterMap("isDriver", true);
+                            await authVm.register();
                           }
                         },
                   style: ElevatedButton.styleFrom(

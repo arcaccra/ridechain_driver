@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:ridechain_driiver/ui/screens/auth/image_capture_screen.dart';
 import '../../../core/core_constants/colors.dart';
 import '../../../core/core_constants/label.dart';
 import '../../../data/locator.dart';
@@ -94,14 +95,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           Gap(8.h),
                           Text(
-                            'Step 1 of 4 · Tell us about yourself',
+                            'Step 1 of 3 · Tell us about yourself',
                             style: TextStyle(fontSize: 13.sp, color: Colors.grey[500]),
                           ),
                           Gap(12.h),
                           // 4-segment progress bar
                           Row(
                             children: List.generate(
-                              4,
+                              3,
                               (i) => Expanded(
                                 child: Container(
                                   height: 4.h,
@@ -248,8 +249,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   return;
                                 }
                                 final phoneNumber = _phoneController.text.trim();
+                                // Strip the local trunk prefix (leading zeros)
+                                // before prepending the country code, so the
+                                // E.164 number stays within 15 characters.
+                                var localNumber = toNumericString(phoneNumber)
+                                    .replaceFirst(RegExp(r'^0+'), '');
                                 final formattedNumber =
-                                    '+${country.phoneCode}${toNumericString(phoneNumber)}';
+                                    '+${country.phoneCode}$localNumber';
                                 final email = _emailCtrl.text.trim();
                                 final username = _nameCtrl.text.trim();
                                 authVm.addToRegisterMap(
@@ -269,7 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   showCancelBtn: true,
                                   onOkayBtnTap: () async {
                                     Navigator.pop(context);
-                                    Get.to(() => const PasswordScreen(),
+                                    Get.to(() => const ImageCaptureScreen(),
                                         transition: Transition.leftToRight);
                                   },
                                 );

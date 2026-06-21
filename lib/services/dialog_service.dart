@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../app/theme.dart';
 import '../core/core_constants/colors.dart';
 import '../data/models/api_response.dart';
 import '../ui/shared_widgets/custom_alert_dialog.dart';
+
+/// Global messenger key so snackbars can be shown from anywhere (services,
+/// providers) without a BuildContext and without depending on GetX's overlay,
+/// which is unreliable across route transitions. Wired into GetMaterialApp.
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 enum AlertDialogType { success, error, warning, confirm, custom }
 
@@ -138,36 +143,73 @@ class DialogService {
 
 
   //snackbar for getting dialogs
-  showSnackBar(String title, String message) {
-    return Get.snackbar(
-      title,
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: AppColors.purple,
-      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      snackStyle: SnackStyle.FLOATING,
-      overlayBlur: 10,
-      overlayColor: AppColors.purple.withOpacity(0.2),
-      titleText: Text(
-        title,
-        style: AppThemes.getCustomTextStyle(
-          fontFamily: "Inter",
-          fontSize: 16,
-          weight: FontWeight.w700,
-          color: AppColors.white
-        )
-      ),
-      messageText: Text(
-        message,
-        style: AppThemes.getCustomTextStyle(
-            fontFamily: "Inter",
-            fontSize: 14,
-            weight: FontWeight.w400,
-            color: AppColors.white
-        )
-      ),
-    );
+  //
+  // Deferred to the next frame so it survives navigation: callers frequently
+  // show a snackbar and then immediately `Get.offAll(...)`, which tears down the
+  // overlay the snackbar would attach to. Scheduling it post-frame lets it bind
+  // to the destination route's overlay instead, so it reliably shows after an
+  // API call completes.
+  void showSnackBar(String title, String message, {bool isError = false}) {
+    final bg = isError ? const Color(0xFFDC2626) : AppColors.purple;
+    // Deferred to the next frame so it is always safe to call — including from
+    // initState/build and immediately before navigation — without hitting
+    // "showSnackBar() cannot be called during build".
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final messenger = rootScaffoldMessengerKey.currentState;
+      if (messenger == null) return;
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+          backgroundColor: bg,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          content: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isError
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: AppColors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppThemes.getCustomTextStyle(
+                        fontFamily: "Inter",
+                        fontSize: 15,
+                        weight: FontWeight.w700,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: AppThemes.getCustomTextStyle(
+                        fontFamily: "Inter",
+                        fontSize: 13,
+                        weight: FontWeight.w400,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
 

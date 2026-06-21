@@ -8,7 +8,10 @@ import '../../../../core/core_constants/label.dart';
 
 class DriverInfoUpdate extends StatelessWidget {
   final VoidCallback? updateDriver;
-  const DriverInfoUpdate({super.key, this.updateDriver});
+  final String? title;
+  final String? message;
+  const DriverInfoUpdate(
+      {super.key, this.updateDriver, this.title, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +33,9 @@ class DriverInfoUpdate extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(Label.incompleteDriverInformation, style: AppThemes.getCustomTextStyle(fontSize: 16, color: AppColors.white, weight: FontWeight.w700, lineHeight: 1.4)),
+            Text(title ?? Label.incompleteDriverInformation, style: AppThemes.getCustomTextStyle(fontSize: 16, color: AppColors.white, weight: FontWeight.w700, lineHeight: 1.4)),
             Gap(2),
-            Text(Label.incompleteInfoMsg, style: AppThemes.getCustomTextStyle(fontSize: 12, color: AppColors.white, weight: FontWeight.w400, lineHeight: 1.4)),
+            Text(message ?? Label.incompleteInfoMsg, style: AppThemes.getCustomTextStyle(fontSize: 12, color: AppColors.white, weight: FontWeight.w400, lineHeight: 1.4)),
           ],
         ),
       ),

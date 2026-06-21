@@ -124,28 +124,30 @@ class ShowAvailableCarsWidget extends StatelessWidget {
                                     ],
                                   ),
                                   Gap(10.w),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'PICKUP',
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          color: Colors.grey[400],
-                                          letterSpacing: 0.5,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'PICKUP',
+                                          style: TextStyle(
+                                            fontSize: 10.sp,
+                                            color: Colors.grey[400],
+                                            letterSpacing: 0.5,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        ride.pickUp?.name ?? '',
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black,
+                                        Text(
+                                          ride.pickUp?.name ?? '',
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -160,28 +162,30 @@ class ShowAvailableCarsWidget extends StatelessWidget {
                                     size: 10.w,
                                   ),
                                   Gap(6.w),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'DROP-OFF',
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          color: Colors.grey[400],
-                                          letterSpacing: 0.5,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'DROP-OFF',
+                                          style: TextStyle(
+                                            fontSize: 10.sp,
+                                            color: Colors.grey[400],
+                                            letterSpacing: 0.5,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        ride.dropOff?.name ?? '',
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black,
+                                        Text(
+                                          ride.dropOff?.name ?? '',
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),

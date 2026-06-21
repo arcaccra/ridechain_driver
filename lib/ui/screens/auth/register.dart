@@ -80,6 +80,7 @@ class _RegisterState extends State<Register> {
       authVm.addToRegisterMap("password1", password1);
       var password2 = _confirmPasswordCtrl.text.trim();
       authVm.addToRegisterMap("password2", password2);
+      authVm.addToRegisterMap("isDriver", true);
       await authVm.register();
 
     } else if (_currentPage == 0) {

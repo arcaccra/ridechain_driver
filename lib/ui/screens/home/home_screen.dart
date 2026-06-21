@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:ridechain_driiver/ui/screens/auth/driver_document_upload.dart';
 import 'package:ridechain_driiver/ui/screens/auth/id_card_documents.dart';
+import 'package:ridechain_driiver/ui/screens/auth/wallet_info.dart';
 import 'package:ridechain_driiver/ui/screens/create_ride/create_new_ride.dart';
 import 'package:ridechain_driiver/ui/screens/home/show_available_cars.dart';
 import 'package:ridechain_driiver/ui/screens/home/widget/confirm_and_start_ride.dart';
@@ -107,8 +108,12 @@ class _HomePageState extends State<HomePage> {
       //   }
       // // }
 
-      final driverId = authVm.currentUser!.driver!.id.toString();
-      if(authVm.hasDriverSubmittedDocs()) FCMService.instance.saveAnActivateTokenRefresh(driverId);
+      // A driver who skipped the document step has no driver profile yet, so
+      // guard against null instead of force-unwrapping.
+      final driverId = authVm.currentUser?.driver?.id?.toString();
+      if (driverId != null && authVm.hasDriverSubmittedDocs()) {
+        FCMService.instance.saveAnActivateTokenRefresh(driverId);
+      }
 
       //_listenToRemoteMessagesFromRide();
 
@@ -137,7 +142,7 @@ class _HomePageState extends State<HomePage> {
             
             buildTopContainer(),
             
-            if(!authVm.hasDriverSubmittedDocs()) buildBannerForFileUpload(),
+            if(authVm.needsProfileCompletion) buildBannerForFileUpload(),
             
             //build the bottom card
             buildBottomCard(),
@@ -194,14 +199,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget buildBannerForFileUpload() {
+    final docsMissing = !authVm.hasCompleteDocuments;
     return Positioned(
         top: kToolbarHeight + 60.h,
         left: 20,
         right: 20,
-        child: Center(child: DriverInfoUpdate(updateDriver: (){
-          authVm.setRegistrationMode(false);
-          authVm.checkIfDriverHasCompleteDocumentation(false);
-        },))
+        child: Center(
+          child: DriverInfoUpdate(
+            title: docsMissing
+                ? 'Complete your verification'
+                : 'Add your payout wallet',
+            message: docsMissing
+                ? 'Submit your documents and add a wallet before you can create or start rides.'
+                : 'Add a Cardano wallet to receive your ADA earnings before creating or starting rides.',
+            updateDriver: () {
+              if (docsMissing) {
+                authVm.setRegistrationMode(false);
+                authVm.checkIfDriverHasCompleteDocumentation(false);
+              } else {
+                Get.to(() => const WalletInfo());
+              }
+            },
+          ),
+        )
     );
   }
 
@@ -210,7 +230,7 @@ class _HomePageState extends State<HomePage> {
     return Positioned(
       left: 16,
       right: 16,
-      bottom: 88.h,
+      bottom: 16,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) {
@@ -381,11 +401,92 @@ class _HomePageState extends State<HomePage> {
             height: 52.h,
             child: ElevatedButton(
               onPressed: () async {
+                final ride = rideProvider.selectedRide;
+                final passengerCount = ride?.passengers?.length ?? 0;
+                final pricePerSeat = double.tryParse(ride?.pricePerSeat ?? '0') ?? 0.0;
+                final totalEarned = pricePerSeat * passengerCount;
+
+                await showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isDismissible: false,
+                  enableDrag: false,
+                  builder: (ctx) {
+                    Future.delayed(const Duration(milliseconds: 1500), () {
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                    });
+                    return Container(
+                      margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 32.h),
+                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 28.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 24,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 56.w,
+                            height: 56.w,
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.payments_outlined, color: Colors.green, size: 26.w),
+                          ),
+                          Gap(14.h),
+                          Text(
+                            'You earned',
+                            style: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
+                          ),
+                          Gap(6.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('⊛ ', style: TextStyle(fontSize: 18.sp, color: AppColors.purple)),
+                              Text(
+                                totalEarned.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontFamily: 'BeauSans',
+                                  fontSize: 38.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              Gap(6.w),
+                              Text(
+                                'ADA',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Gap(10.h),
+                          Text(
+                            '$passengerCount rider${passengerCount == 1 ? '' : 's'} · ⊛ ${pricePerSeat.toStringAsFixed(1)} ADA/seat',
+                            style: TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+
                 await locator<TripFirebaseService>().updateTripStatus(
-                  tripId: rideProvider.selectedRide!.uuid!,
+                  tripId: ride!.uuid!,
                   status: 'completed',
                   driver: authVm.currentUser!,
-                  passengers: rideProvider.selectedRide?.passengers!.map((e) => e.id.toString()).toList(),
+                  passengers: ride.passengers!.map((e) => e.id.toString()).toList(),
                 );
                 rideProvider.updateRideState(RideState.idle);
               },
@@ -407,21 +508,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Returns true (and shows a banner-aligned snackbar) when the driver hasn't
+  /// finished onboarding, blocking ride creation/starting.
+  bool _blockIfIncomplete() {
+    if (!authVm.hasCompleteDocuments) {
+      locator<DialogService>().showSnackBar("Finish verification",
+          "Submit your required documents before creating or starting rides.",
+          isError: true);
+      return true;
+    }
+    if (!authVm.hasWallet) {
+      locator<DialogService>().showSnackBar("Add a payout wallet",
+          "Add your Cardano wallet to receive ADA before creating or starting rides.",
+          isError: true);
+      return true;
+    }
+    return false;
+  }
+
   //build the destination input card
   Widget _letsRideCard() {
     return BottomCardWidget(
       onBtnTap: () {
-        if(!authVm.hasDriverSubmittedDocs()) {
-          locator<DialogService>().showSnackBar("No Access", "Please submit all your required documents to create a trip.");
-          return;
-        }
+        if(_blockIfIncomplete()) return;
         rideProvider.fetchDriverRides();
       },
       onCreateRide: () {
-        if(!authVm.hasDriverSubmittedDocs()) {
-          locator<DialogService>().showSnackBar("No Access", "Please submit all your required documents to create a trip.");
-          return;
-        }
+        if(_blockIfIncomplete()) return;
         Get.to(()=> CreateNewRide());
       },
     );
@@ -686,8 +799,8 @@ class _HomeStateCard extends StatelessWidget {
                     height: 48.h,
                     child: OutlinedButton.icon(
                       onPressed: onSecondaryBtnTap,
-                      icon: Icon(secondaryBtnIcon, size: 16.w),
-                      label: Text(secondaryBtnText!, style: TextStyle(fontSize: 14.sp)),
+                      icon: Icon(secondaryBtnIcon, size: 16.w, color: Colors.black,),
+                      label: Text(secondaryBtnText!, style: TextStyle(fontSize: 14.sp, color: Colors.black)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(

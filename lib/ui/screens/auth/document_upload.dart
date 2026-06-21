@@ -16,8 +16,8 @@ import '../../../services/dialog_service.dart';
 import '../../../services/rides_service.dart';
 import '../../shared_widgets/custom_dropdown_widget.dart';
 import '../../shared_widgets/custom_textfield.dart';
-import '../navigation/app_navigation_screen.dart';
 import 'auth_widgets/capture_document_image_or_file_card.dart';
+import 'wallet_info.dart';
 
 class DocumentUpload extends StatefulWidget {
   final bool isRegistration;
@@ -36,9 +36,6 @@ class _DocumentUploadState extends State<DocumentUpload> {
   File? idFrontImage;
   File? idBackImage;
   File? licenseCert;
-  dio.MultipartFile? frontMultipartImage;
-  dio.MultipartFile? backMultipartImage;
-  dio.MultipartFile? licenseCertMultipartImage;
 
   // Vehicle documents
   final GlobalKey<FormState> _vehicleGlobalKey = GlobalKey<FormState>();
@@ -47,11 +44,8 @@ class _DocumentUploadState extends State<DocumentUpload> {
   String? selectedColor;
   File? vehicleImage;
   File? licenseImage;
-  dio.MultipartFile? licenseMultipartImage;
-  dio.MultipartFile? vehicleMultipartImage;
 
   late AuthVm authVm;
-  Map<String, dynamic> allDocumentMap = {};
   final _pageController = PageController();
   int _currentPage = 0;
 
@@ -70,6 +64,17 @@ class _DocumentUploadState extends State<DocumentUpload> {
     super.dispose();
   }
 
+  /// Builds a fresh [dio.MultipartFile] from a picked [file] at submit time.
+  /// Tries image (re-encoded JPEG) first, falling back to a generic file for
+  /// non-image documents (e.g. a PDF). Rebuilding on each attempt means a failed
+  /// submit never consumes the original selection.
+  Future<dio.MultipartFile?> _buildMultipart(File? file) async {
+    if (file == null) return null;
+    final asImage = authVm.convertImageToMultipartFile(file);
+    if (asImage != null) return asImage;
+    return authVm.convertFileToMultipartFile(file);
+  }
+
   Future<void> _nextPage() async {
     if (_currentPage == 0) {
       if (!_globalKey.currentState!.validate()) return;
@@ -85,14 +90,6 @@ class _DocumentUploadState extends State<DocumentUpload> {
         locator<DialogService>().showSnackBar('Missing Insurance', 'Please upload your insurance certificate');
         return;
       }
-      final idNumber = _idNumber.text.trim();
-      allDocumentMap.addAll({
-        'id_type': RidesService.idMap[selectedIdType],
-        'id_number': idNumber,
-        'id_front_image': frontMultipartImage,
-        'id_back_image': backMultipartImage,
-        'insurance_cert': licenseCertMultipartImage,
-      });
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentPage == 1) {
       if (!_vehicleGlobalKey.currentState!.validate()) return;
@@ -112,33 +109,36 @@ class _DocumentUploadState extends State<DocumentUpload> {
         locator<DialogService>().showSnackBar('No License Image', 'Please upload your license');
         return;
       }
-      allDocumentMap.addAll({
-        'vehicle_image': vehicleMultipartImage,
+
+      // Rebuild every MultipartFile fresh from the kept File objects, so a
+      // failed submit can be retried without re-picking any document.
+      final allDocumentMap = <String, dynamic>{
+        'id_type': RidesService.idMap[selectedIdType],
+        'id_number': _idNumber.text.trim(),
+        'id_front_image': await _buildMultipart(idFrontImage),
+        'id_back_image': await _buildMultipart(idBackImage),
+        'insurance_cert': await _buildMultipart(licenseCert),
+        'vehicle_image': await _buildMultipart(vehicleImage),
         'vehicle_type': selectedVehicle!.toUpperCase(),
         'vehicle_color': selectedColor!.toUpperCase(),
         'vehicle_plate_number': _vehiclePlateNumber.text.trim(),
-        'license_image': licenseMultipartImage,
-      });
+        'license_image': await _buildMultipart(licenseImage),
+      };
+
       bool driverExists = authVm.checkIfDriverExists();
       final bool success = await authVm.uploadDriverDocs(allDocumentMap, driverExists: driverExists);
       if (success) {
         if (widget.isRegistration) {
-          Get.offAll(() => const AppNavigationScreen());
+          // After documents, continue to the wallet step (skippable).
+          Get.offAll(() => const WalletInfo(fromOnboarding: true));
         } else {
           Get.back();
         }
       } else {
-        setState(() {
-          frontMultipartImage = null;
-          backMultipartImage = null;
-          licenseCertMultipartImage = null;
-          idBackImage = null;
-          idFrontImage = null;
-          licenseCert = null;
-          vehicleMultipartImage = null;
-          vehicleImage = null;
-        });
-        locator<DialogService>().showSnackBar('Upload Failed', 'Something went wrong. Please try again.');
+        // Keep all picked files so the driver can simply tap submit again.
+        locator<DialogService>().showSnackBar(
+            'Upload Failed', 'Something went wrong. Please try again.',
+            isError: true);
       }
     }
   }
@@ -193,6 +193,21 @@ class _DocumentUploadState extends State<DocumentUpload> {
                       ],
                     ),
                   ),
+                  if (widget.isRegistration)
+                    TextButton(
+                      onPressed: authVm.isLoading
+                          ? null
+                          : () => Get.offAll(
+                              () => const WalletInfo(fromOnboarding: true)),
+                      child: Text(
+                        'Skip for now',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.purple,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -318,9 +333,7 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.camera);
                 if (image != null) {
                   setState(() {
-                    idFrontImage = image;
-                    frontMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    idFrontImage = image;                  });
                 }
               },
               onGalleryTap: () async {
@@ -328,21 +341,13 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.gallery);
                 if (image != null) {
                   setState(() {
-                    idFrontImage = image;
-                    frontMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    idFrontImage = image;                  });
                 }
               },
               onFileTap: () async {
                 File? file = await authVm.captureFile();
                 if (file != null) {
-                  setState(() {
-                    idFrontImage = file;
-                    frontMultipartImage = null;
-                  });
-                  authVm.convertFileToMultipartFile(file).then((v) {
-                    setState(() => frontMultipartImage = v);
-                  });
+                  setState(() => idFrontImage = file);
                 }
               },
             ),
@@ -357,9 +362,7 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.camera);
                 if (image != null) {
                   setState(() {
-                    idBackImage = image;
-                    backMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    idBackImage = image;                  });
                 }
               },
               onGalleryTap: () async {
@@ -367,18 +370,13 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.gallery);
                 if (image != null) {
                   setState(() {
-                    idBackImage = image;
-                    backMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    idBackImage = image;                  });
                 }
               },
               onFileTap: () async {
                 File? file = await authVm.captureFile();
                 if (file != null) {
                   setState(() => idBackImage = file);
-                  authVm.convertFileToMultipartFile(file).then((v) {
-                    setState(() => backMultipartImage = v);
-                  });
                 }
               },
             ),
@@ -393,9 +391,7 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.camera);
                 if (image != null) {
                   setState(() {
-                    licenseCert = image;
-                    licenseCertMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    licenseCert = image;                  });
                 }
               },
               onGalleryTap: () async {
@@ -403,18 +399,13 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.gallery);
                 if (image != null) {
                   setState(() {
-                    licenseCert = image;
-                    licenseCertMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    licenseCert = image;                  });
                 }
               },
               onFileTap: () async {
                 File? file = await authVm.captureFile();
                 if (file != null) {
                   setState(() => licenseCert = file);
-                  authVm.convertFileToMultipartFile(file).then((v) {
-                    setState(() => licenseCertMultipartImage = v);
-                  });
                 }
               },
             ),
@@ -458,9 +449,7 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.camera);
                 if (image != null) {
                   setState(() {
-                    vehicleImage = image;
-                    vehicleMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    vehicleImage = image;                  });
                 }
               },
               onGalleryTap: () async {
@@ -468,18 +457,13 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.gallery);
                 if (image != null) {
                   setState(() {
-                    vehicleImage = image;
-                    vehicleMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    vehicleImage = image;                  });
                 }
               },
               onFileTap: () async {
                 File? file = await authVm.captureFile();
                 if (file != null) {
                   setState(() => vehicleImage = file);
-                  authVm.convertFileToMultipartFile(file).then((v) {
-                    setState(() => vehicleMultipartImage = v);
-                  });
                 }
               },
             ),
@@ -530,9 +514,7 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.camera);
                 if (image != null) {
                   setState(() {
-                    licenseImage = image;
-                    licenseMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    licenseImage = image;                  });
                 }
               },
               onGalleryTap: () async {
@@ -540,18 +522,13 @@ class _DocumentUploadState extends State<DocumentUpload> {
                 File? image = await authVm.captureImage(context, source: ImageSource.gallery);
                 if (image != null) {
                   setState(() {
-                    licenseImage = image;
-                    licenseMultipartImage = authVm.convertImageToMultipartFile(image);
-                  });
+                    licenseImage = image;                  });
                 }
               },
               onFileTap: () async {
                 File? file = await authVm.captureFile();
                 if (file != null) {
                   setState(() => licenseImage = file);
-                  authVm.convertFileToMultipartFile(file).then((v) {
-                    setState(() => licenseMultipartImage = v);
-                  });
                 }
               },
             ),

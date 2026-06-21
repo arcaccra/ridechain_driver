@@ -12,6 +12,7 @@ import 'package:ridechain_driiver/data/models/wallet.dart';
 import 'package:ridechain_driiver/ui/screens/auth/document_upload.dart';
 import 'package:ridechain_driiver/ui/screens/auth/id_card_documents.dart';
 import 'package:ridechain_driiver/ui/screens/auth/vehicle_registration_documents.dart';
+import 'package:ridechain_driiver/ui/screens/auth/wallet_info.dart';
 
 import '../core/cache_helper.dart';
 import '../data/models/api_response.dart';
@@ -55,6 +56,17 @@ class AuthVm extends BaseProvider {
   bool get isLoading => _authIsLoading;
   String? get errorMessage => _errorMessage;
 
+  /// True when the driver has submitted all required KYC documents.
+  bool get hasCompleteDocuments => hasDriverSubmittedDocs();
+
+  /// True when a Cardano payout wallet address is on file.
+  bool get hasWallet =>
+      walletAddress != null && walletAddress!.trim().isNotEmpty;
+
+  /// True when the driver still needs to finish onboarding (documents and/or
+  /// wallet). Used to gate ride creation and to show the home banner.
+  bool get needsProfileCompletion => !hasCompleteDocuments || !hasWallet;
+
 
   //
   setRegistrationMode(bool mode) {
@@ -69,7 +81,7 @@ class AuthVm extends BaseProvider {
     try{
       var response = await auth.login(body);
       var apiResponse = ApiResponse.parse(response);
-      log("${apiResponse.mappedObjects}");
+      debugPrint("${apiResponse.mappedObjects}");
       if(apiResponse.code == 200 || apiResponse.code == 201) {
         _currentUser = AuthModel.fromJson(apiResponse.mappedObjects!);
         if(_currentUser != null) {
@@ -83,13 +95,23 @@ class AuthVm extends BaseProvider {
           if (_model?.id != null) {
             await FCMService.instance.saveAnActivateTokenRefresh(_model!.id!.toString());
           }
-          Get.offAll(() => const AppNavigationScreen(), transition: Transition.leftToRight);
+          // If the driver is fully verified but has no payout wallet yet, give
+          // them a chance to add one (skippable) before entering the app.
+          // Otherwise go straight in — the home banner covers anything missing.
+          if (hasCompleteDocuments && !hasWallet) {
+            Get.offAll(() => const WalletInfo(fromOnboarding: true),
+                transition: Transition.leftToRight);
+          } else {
+            Get.offAll(() => const AppNavigationScreen(),
+                transition: Transition.leftToRight);
+          }
         }
       } else {
-        dialog.showSnackBar("Error", "Could not login at this moment please try again",);
+        dialog.showSnackBar("Login failed",
+            "Invalid phone number or password. Please try again.", isError: true);
       }
     } catch (e) {
-      dialog.showSnackBar("An unexpected error occurred", e.toString(),);
+      dialog.showSnackBar("Something went wrong", e.toString(), isError: true);
     } finally {
       updateUi(()=> _authIsLoading = false);
     }
@@ -102,6 +124,7 @@ class AuthVm extends BaseProvider {
     try{
       var response = await auth.register(body);
       var apiResponse = ApiResponse.parse(response);
+      debugPrint("${apiResponse.mappedObjects}");
       if(apiResponse.code == 200 || apiResponse.code == 201) {
         _currentUser = AuthModel.fromJson(apiResponse.mappedObjects!);
         _model = _currentUser?.user;
@@ -111,13 +134,21 @@ class AuthVm extends BaseProvider {
           _clearError();
           clearBodyAndImages();
           setRegistrationMode(true);
-          checkIfDriverHasCompleteDocumentation(true);
+          dialog.showSnackBar(
+              "Account created", "Next, let's verify your documents.");
+          // Registration always proceeds to the document submission flow
+          // (which is skippable), then the wallet step.
+          Get.offAll(() => const DocumentUpload(isRegistration: true),
+              transition: Transition.leftToRight);
         }
       } else {
-        dialog.showSnackBar("Error", "Could not login at this moment please try again",);
+        dialog.showSnackBar(
+            "Registration failed", "We couldn't create your account. Please try again.",
+            isError: true);
       }
-    } catch (e) {
-      dialog.showSnackBar("An unexpected error occurred", e.toString());
+    } catch (e, st) {
+      log('[AuthVm.register] error: $e', stackTrace: st);
+      dialog.showSnackBar("Registration failed", e.toString(), isError: true);
       imageFile = null;
       selectedFile = null;
     } finally {
@@ -215,7 +246,9 @@ class AuthVm extends BaseProvider {
         return true;
       }
     } catch (e) {
-      dialog.showSnackBar("An unexpected error occurred", e.toString());
+      // A missing wallet is normal for newly registered drivers — don't alarm
+      // the user. Just leave walletAddress null; the onboarding/banner handles it.
+      log('[AuthVm] getWalletAddress: no wallet on file yet ($e)');
     } finally {
       updateUi(()=> _authIsLoading = false);
     }
@@ -256,8 +289,10 @@ class AuthVm extends BaseProvider {
     updateUi(()=> _authIsLoading = true);
     _clearError();
     try{
+      debugPrint("Does the driver exists $driverExists");
       var response = driverExists ? await auth.updateDriverDocs(body, _model!.driver!.id!)  : await auth.uploadDriverDocs(body);
       var apiResponse = ApiResponse.parse(response);
+      debugPrint("Driver submission documents ${apiResponse.mappedObjects}");
       if(apiResponse.code == 200 || apiResponse.code == 201) {
         bool success = await fetchUserById(_model!.id!);
         if(success) {
@@ -268,6 +303,8 @@ class AuthVm extends BaseProvider {
       }
     } catch (e, stacktrace) {
       dialog.showSnackBar("An unexpected error occurred", e.toString());
+      debugPrint("This is the error =====>>$e");
+      debugPrint("This is the stacktrace =====>>$stacktrace");
     } finally {
       updateUi(()=> _authIsLoading = false);
     }
@@ -281,6 +318,7 @@ class AuthVm extends BaseProvider {
         || _model?.driver?.idBackImage == null
         || _model?.driver?.idType == null
         || _model?.driver?.insuranceCert == null
+        || _model?.driver?.licenceImage == null
         || _model?.driver?.vehicleImage == null
         || _model?.driver?.vehiclePlateNumber == null
         || _model?.driver?.vehicleType == null
@@ -316,6 +354,7 @@ class AuthVm extends BaseProvider {
         || _model?.driver?.idBackImage == null
         || _model?.driver?.idType == null
         || _model?.driver?.insuranceCert == null
+        || _model?.driver?.licenceImage == null
     || _model?.driver?.vehicleImage == null
         || _model?.driver?.vehiclePlateNumber == null
         || _model?.driver?.vehicleType == null

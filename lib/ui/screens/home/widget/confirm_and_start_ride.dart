@@ -262,7 +262,7 @@ class _ConfirmAndStartRideState extends State<ConfirmAndStartRide> {
                         style: TextStyle(fontSize: 16.sp, color: AppColors.purple),
                       ),
                       Text(
-                        '${((ride?.passengers?.length ?? 0) * ((ride?.pricePerSeat ?? 0) as num)).toStringAsFixed(1)}',
+                        ((ride?.passengers?.length ?? 0) * (num.parse(ride?.pricePerSeat ?? "0"))).toStringAsFixed(1),
                         style: TextStyle(
                           fontFamily: 'BeauSans',
                           fontSize: 28.sp,
