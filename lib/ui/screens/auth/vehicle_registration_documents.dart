@@ -520,7 +520,7 @@ class _VehicleRegistrationDocumentsState
                               'vehicle_type': selectedVehicle!.toUpperCase(),
                               'vehicle_color': selectedColor!.toUpperCase(),
                               'vehicle_plate_number': licensePlateNumber,
-                              'license_image': licenseMultipartImage,
+                              'licence_image': licenseMultipartImage,
                             };
                             final bool success = await authVm.updateDriverDocs(
                               body,

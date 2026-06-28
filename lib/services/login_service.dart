@@ -23,10 +23,10 @@ class LoginService extends HttpService {
   /// retry (or any second submit) reuses an already-finalized MultipartFile and
   /// throws "The MultipartFile has already been finalized".
   dio.FormData _formData(Map<String, dynamic> data) {
-    final safe = data.map((key, value) => MapEntry(
-          key,
-          value is dio.MultipartFile ? value.clone() : value,
-        ));
+    final safe = data.map(
+      (key, value) =>
+          MapEntry(key, value is dio.MultipartFile ? value.clone() : value),
+    );
     return dio.FormData.fromMap(safe);
   }
 
@@ -45,7 +45,7 @@ class LoginService extends HttpService {
   }
 
   fetchUserById(int id) async {
-    var response = await get("${Api.user}$id",);
+    var response = await get("${Api.user}$id");
     return response;
   }
 
@@ -78,7 +78,7 @@ class LoginService extends HttpService {
   //upload the form
   updateDriverDocs(Map<String, dynamic> data, int id) async {
     var body = _formData(data);
-    var response = await put("${Api.drivers}$id/update", body: body);
+    var response = await put("${Api.drivers}$id/update/", body: body);
     return response;
   }
 
@@ -97,7 +97,7 @@ class LoginService extends HttpService {
   //is user logged in
   Future<bool> isUserSignedIn() async {
     var data = await CacheHelper.instance.readModel(CacheHelper.authKey);
-    if(data == null) return false;
+    if (data == null) return false;
     AuthModel? model = AuthModel.fromJson(data);
     if (model.token != null) return true;
     return false;
@@ -105,7 +105,9 @@ class LoginService extends HttpService {
 
   //check the page for the
   Future<Object? Function()> checkRegistrationPage() async {
-    Map? data = await CacheHelper.instance.readModel(CacheHelper.registerProcessKey);
+    Map? data = await CacheHelper.instance.readModel(
+      CacheHelper.registerProcessKey,
+    );
 
     if (data != null) {
       if (data.containsKey("full_name")) {
@@ -127,8 +129,15 @@ class LoginService extends HttpService {
     return response;
   }
 
-  Future<BitmapDescriptor> svgToBitmap({required BuildContext context, required String svgAssetPath, Size size = const Size(16, 32)}) async {
-    final pictureInfo = await vg.loadPicture(SvgAssetLoader(svgAssetPath), null);
+  Future<BitmapDescriptor> svgToBitmap({
+    required BuildContext context,
+    required String svgAssetPath,
+    Size size = const Size(16, 32),
+  }) async {
+    final pictureInfo = await vg.loadPicture(
+      SvgAssetLoader(svgAssetPath),
+      null,
+    );
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     final width = (size.width * devicePixelRatio).toInt();
     final height = (size.height * devicePixelRatio).toInt();
@@ -146,9 +155,25 @@ class LoginService extends HttpService {
 
   //driver documents
   List<Map<String, dynamic>> driverDocumentsMap = [
-    {"name": "National ID", "desc": "Valid government-issued national id", "key": "national_id"},
-    {"name": "Driver's License", "desc": "Valid government-issued driver's license", "key": "driver_license"},
-    {"name": "Vehicle Registration", "desc": "Current vehicle registration certificate", "key": "vehicle_registration_cert"},
-    {"name": "Insurance Certificate", "desc": "Valid vehicle insurance documentation", "key": "insurance_cert"},
+    {
+      "name": "National ID",
+      "desc": "Valid government-issued national id",
+      "key": "national_id",
+    },
+    {
+      "name": "Driver's License",
+      "desc": "Valid government-issued driver's license",
+      "key": "driver_license",
+    },
+    {
+      "name": "Vehicle Registration",
+      "desc": "Current vehicle registration certificate",
+      "key": "vehicle_registration_cert",
+    },
+    {
+      "name": "Insurance Certificate",
+      "desc": "Valid vehicle insurance documentation",
+      "key": "insurance_cert",
+    },
   ];
 }

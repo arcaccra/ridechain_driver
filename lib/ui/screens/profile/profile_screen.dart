@@ -4,8 +4,10 @@ import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import '../../../core/core_constants/colors.dart';
+import '../../../data/locator.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/rides_provider.dart';
+import '../../../services/blockfrost_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/wallet_info.dart';
 
@@ -22,6 +24,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authVm = Provider.of<AuthVm>(context);
     final rideVm = Provider.of<RideProvider>(context);
     final user = authVm.currentUser;
+    final hasWallet =
+        authVm.walletAddress != null && authVm.walletAddress!.isNotEmpty;
     final initials = (user?.fullName ?? 'U')
         .split(' ')
         .take(2)
@@ -149,8 +153,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: AppColors.purple,
                       iconBgColor: AppColors.purple.withValues(alpha: 0.1),
                       title: 'Wallet',
-                      subtitle:
-                          '₳ ${authVm.userWallet?.balance?.ada?.toStringAsFixed(0) ?? '0'}',
+                      // The backend doesn't return an on-chain balance, so read
+                      // it live from Blockfrost using the linked address. When no
+                      // wallet is linked yet, prompt the driver to add one.
+                      subtitle: hasWallet ? '' : 'Not set',
+                      subtitleWidget: hasWallet
+                          ? _WalletBalanceSubtitle(address: authVm.walletAddress!)
+                          : null,
                       onTap: () => Get.to(() => const WalletInfo()),
                     ),
                     _GridCard(
@@ -308,6 +317,7 @@ class _GridCard extends StatelessWidget {
   final Color iconBgColor;
   final String title;
   final String subtitle;
+  final Widget? subtitleWidget;
   final VoidCallback onTap;
 
   const _GridCard({
@@ -316,6 +326,7 @@ class _GridCard extends StatelessWidget {
     required this.iconBgColor,
     required this.title,
     required this.subtitle,
+    this.subtitleWidget,
     required this.onTap,
   });
 
@@ -352,15 +363,45 @@ class _GridCard extends StatelessWidget {
                 ),
               ),
               Gap(2.h),
-              Text(
-                subtitle,
-                style:
-                    TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
-              ),
+              subtitleWidget ??
+                  Text(
+                    subtitle,
+                    style:
+                        TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
+                  ),
             ],
           ),
         ),
       );
+}
+
+/// Shows the driver's live on-chain ADA balance for [address], fetched from
+/// Blockfrost. The backend wallet payload carries no balance, so we query the
+/// chain directly — the same source the wallet screen uses.
+class _WalletBalanceSubtitle extends StatelessWidget {
+  final String address;
+  const _WalletBalanceSubtitle({required this.address});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<int>(
+      future: locator<BlockfrostService>().getLovelaceBalance(address),
+      builder: (context, snap) {
+        final String text;
+        if (snap.connectionState == ConnectionState.waiting) {
+          text = 'Checking…';
+        } else if (snap.hasError) {
+          text = 'Unavailable';
+        } else {
+          text = '₳ ${(snap.data! / 1000000).toStringAsFixed(2)}';
+        }
+        return Text(
+          text,
+          style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
+        );
+      },
+    );
+  }
 }
 
 class _MenuRow extends StatelessWidget {

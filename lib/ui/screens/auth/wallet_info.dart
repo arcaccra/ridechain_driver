@@ -265,7 +265,9 @@ class _WalletInfoState extends State<WalletInfo> {
         Gap(8.h),
 
         Text(
-          'Connect a Cardano wallet to receive your ADA ride earnings.',
+          hasWallet
+              ? 'Your payout wallet is connected. View it below, or switch to a different one.'
+              : 'Connect a Cardano wallet to receive your ADA ride earnings.',
           style: AppThemes.getCustomTextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
@@ -276,15 +278,45 @@ class _WalletInfoState extends State<WalletInfo> {
         ).animate(delay: 120.ms).fade(begin: 0, end: 1, duration: 400.ms),
 
         if (hasWallet) ...[
-          Gap(16.h),
-          _BalancePill(address: authVm.walletAddress!),
+          Gap(20.h),
+          _ActiveWalletCard(address: authVm.walletAddress!),
         ],
 
         Gap(32.h),
 
+        // When a wallet already exists, frame the options as replacing it.
+        if (hasWallet) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Change wallet',
+              style: AppThemes.getCustomTextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 17,
+                weight: FontWeight.w700,
+                color: AppColors.primaryColor,
+              ),
+            ),
+          ),
+          Gap(4.h),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Linking a different wallet updates where your future ADA earnings are sent.',
+              style: AppThemes.getCustomTextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                weight: FontWeight.w400,
+                color: const Color(0xFF6B7280),
+              ),
+            ),
+          ),
+          Gap(16.h),
+        ],
+
         _OptionCard(
           icon: Icons.download_rounded,
-          title: 'Import existing wallet',
+          title: hasWallet ? 'Import a different wallet' : 'Import existing wallet',
           subtitle: 'Enter your 12 or 24-word seed phrase',
           onTap: () => setState(() => _mode = _WalletMode.importSeed),
         ).animate(delay: 180.ms).fade(begin: 0, end: 1, duration: 400.ms),
@@ -694,6 +726,81 @@ class _WalletInfoState extends State<WalletInfo> {
 }
 
 // ── Supporting widgets ────────────────────────────────────────────────────────
+
+/// Shows the currently linked payout wallet: a truncated, copyable address and
+/// its live on-chain balance. Rendered in choose mode when a wallet exists.
+class _ActiveWalletCard extends StatelessWidget {
+  final String address;
+  const _ActiveWalletCard({required this.address});
+
+  String get _shortAddress => address.length <= 20
+      ? address
+      : '${address.substring(0, 12)}…${address.substring(address.length - 6)}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.purple.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF16A34A), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'Active wallet',
+                style: AppThemes.getCustomTextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  weight: FontWeight.w700,
+                  color: AppColors.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _shortAddress,
+                  style: AppThemes.getCustomTextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    weight: FontWeight.w500,
+                    color: AppColors.primaryColor,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: address));
+                  locator<DialogService>().showSnackBar(
+                      'Copied', 'Wallet address copied to clipboard.');
+                },
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 12),
+                  child: Icon(Icons.copy_rounded,
+                      color: AppColors.purple, size: 18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _BalancePill(address: address),
+        ],
+      ),
+    );
+  }
+}
 
 class _BalancePill extends StatelessWidget {
   final String address;

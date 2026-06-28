@@ -296,7 +296,7 @@ class AuthVm extends BaseProvider {
       if(apiResponse.code == 200 || apiResponse.code == 201) {
         bool success = await fetchUserById(_model!.id!);
         if(success) {
-          dialog.showSnackBar("Success", "user documents has been successfully submitted");
+          dialog.showSnackBar("Identity documents saved", "Next, add your vehicle details.");
           await tripService.createNewUser(user: _model!);
           return true;
         }

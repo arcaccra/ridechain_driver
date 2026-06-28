@@ -90,7 +90,33 @@ class _DocumentUploadState extends State<DocumentUpload> {
         locator<DialogService>().showSnackBar('Missing Insurance', 'Please upload your insurance certificate');
         return;
       }
-      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+
+      // Step 1 — create the driver with identity documents only. Splitting the
+      // create here from the vehicle update on page 2 keeps each request small
+      // and makes the second call an idempotent update (no duplicate-key
+      // collision on retry). If the driver already exists (e.g. an in-app
+      // re-submission), uploadDriverDocs routes to an update instead.
+      final idDocumentMap = <String, dynamic>{
+        'id_type': RidesService.idMap[selectedIdType],
+        'id_number': _idNumber.text.trim(),
+        'id_front_image': await _buildMultipart(idFrontImage),
+        'id_back_image': await _buildMultipart(idBackImage),
+        'insurance_cert': await _buildMultipart(licenseCert),
+      };
+
+      final bool driverExists = authVm.checkIfDriverExists();
+      final bool success =
+          await authVm.uploadDriverDocs(idDocumentMap, driverExists: driverExists);
+      if (success) {
+        _pageController.nextPage(
+            duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } else {
+        // Keep all picked files so the driver can simply tap continue again.
+        locator<DialogService>().showSnackBar(
+            'Upload Failed',
+            'We couldn\'t save your identity documents. Please try again.',
+            isError: true);
+      }
     } else if (_currentPage == 1) {
       if (!_vehicleGlobalKey.currentState!.validate()) return;
       if (selectedVehicle == null) {
@@ -110,23 +136,34 @@ class _DocumentUploadState extends State<DocumentUpload> {
         return;
       }
 
-      // Rebuild every MultipartFile fresh from the kept File objects, so a
-      // failed submit can be retried without re-picking any document.
-      final allDocumentMap = <String, dynamic>{
-        'id_type': RidesService.idMap[selectedIdType],
-        'id_number': _idNumber.text.trim(),
-        'id_front_image': await _buildMultipart(idFrontImage),
-        'id_back_image': await _buildMultipart(idBackImage),
-        'insurance_cert': await _buildMultipart(licenseCert),
+      // The driver must already exist from page 1's create. If it doesn't, the
+      // create failed silently — send the user back to retry it rather than
+      // attempting an update against a non-existent record.
+      final int? driverId = authVm.currentUser?.driver?.id;
+      if (driverId == null) {
+        locator<DialogService>().showSnackBar(
+            'Something went wrong',
+            'Your driver profile wasn\'t created. Please go back and resubmit your identity documents.',
+            isError: true);
+        return;
+      }
+
+      // Step 2 — update the just-created driver with vehicle details. Rebuild
+      // every MultipartFile fresh from the kept File objects, so a failed
+      // submit can be retried without re-picking any document.
+      final vehicleDocumentMap = <String, dynamic>{
         'vehicle_image': await _buildMultipart(vehicleImage),
         'vehicle_type': selectedVehicle!.toUpperCase(),
         'vehicle_color': selectedColor!.toUpperCase(),
         'vehicle_plate_number': _vehiclePlateNumber.text.trim(),
-        'license_image': await _buildMultipart(licenseImage),
+        // Backend uses the British spelling "licence_image"; sending
+        // "license_image" is silently ignored and leaves the field null,
+        // which keeps the profile flagged incomplete.
+        'licence_image': await _buildMultipart(licenseImage),
       };
 
-      bool driverExists = authVm.checkIfDriverExists();
-      final bool success = await authVm.uploadDriverDocs(allDocumentMap, driverExists: driverExists);
+      final bool success =
+          await authVm.updateDriverDocs(vehicleDocumentMap, driverId);
       if (success) {
         if (widget.isRegistration) {
           // After documents, continue to the wallet step (skippable).
@@ -137,7 +174,8 @@ class _DocumentUploadState extends State<DocumentUpload> {
       } else {
         // Keep all picked files so the driver can simply tap submit again.
         locator<DialogService>().showSnackBar(
-            'Upload Failed', 'Something went wrong. Please try again.',
+            'Update Failed',
+            'We couldn\'t save your vehicle details. Please try again.',
             isError: true);
       }
     }
